@@ -8,8 +8,6 @@
 
 using namespace std;
 
-
-
 class Menu;
 class Grupo;
 
@@ -26,17 +24,8 @@ class Docente {
         string especialidad;
         map<string, Grupo*> clases; // Nombre clase, id
         void mostrarMaterias();
-        string registrarDocente();
+        void registrarDocente(); // Cambiado de string a void
 };
-
-void Docente::mostrarMaterias() {
-    // Mostrar todas las materias
-
-}
-
-string Docente::registrarDocente() {
-
-}
 
 class Estudiante {
     public:
@@ -50,9 +39,7 @@ class Estudiante {
         void mostrarKardex();
 };
 
-void Estudiante::mostrarCalificaciones() {
-    // Mostrar calificaciones del estudiante
-};
+
 
 class Grupo {
     public:
@@ -61,24 +48,47 @@ class Grupo {
         string semestre;
         string horario;
         Docente *maestro;
-        // map<int, Estudiante*> alumnos; // Estudiantes, calificacion
-        // map<int, float> calificaciones;
         map<string, float> estudiantes; // matricula - calificacion
         void inscribir(Estudiante*);
-        void mostrarCalificaciones();
-        void crearGrupo();        
+        void mostrarCalificaciones();      
 };
 
-void Grupo::crearGrupo() {
+/*
+Esto debe de estar despues de grupo
+*/
+void Estudiante::mostrarCalificaciones() {
+    // Mostrar calificaciones del estudiante
+    cout << "\nCalificaciones de " << this->nombre << ": " << endl;
+    if(this->clases.empty()) {
+        cout << "No tiene materias inscritas." << endl;
+    } 
+    else {
+        for(auto i: this->clases) {
+            cout << "\n- " << i.second->materia << " : " << i.second->estudiantes.find(this->matricula)->second;
+        }
+    }
+};
 
+void Docente::mostrarMaterias() {
+    // Mostrar todas las materias
+    cout << "\nMaterias de " << this->nombre << ": " << endl;
+    if(this->clases.empty()) {
+        cout << "No tiene materias registradas." << endl;
+    } 
+    else {
+        for(auto i: this->clases) {
+            cout << "\n- " << i.second->materia << " [" << i.first << "]";
+        }
+    }
 }
+
+/*
+    TERMINA BLOQUE DE FUNCIONES
+*/
 
 
 void Grupo::inscribir(Estudiante *alumno) {
     // Registrar alumno en materia
-    // int id = this->alumnos.size();
-    // this->alumnos.insert({id, alumno});
-    // this->alumnos.insert()
     this->estudiantes.insert({alumno->matricula, 0.0});
 }
 
@@ -100,44 +110,149 @@ class Menu {
         void registrarSemestre();
         void registrarEstudiante();
         void registrarDocente();
+        void crearGrupo();
 
         void guardarMemoria();
         void cargarMemoria();
 };
 
+void Menu::crearGrupo() {
+    string numEmpleado;
+    cout << "Numero de empleado del docente: ";
+    cin >> numEmpleado;
+    if(docentes.find(numEmpleado) == docentes.end()) {
+        cout << "Docente no encontrado." << endl;
+        return;
+    }
+    Docente *docente = &docentes[numEmpleado];
+    Grupo g;
+    string aux1, aux2, aux3;
+    int semValido = 0;
+    cout << "Codigo de materia: ";
+    cin.ignore();
+    getline(cin, g.codigo);
+    cin.ignore();
+    cout << "Materia: ";
+    
+    getline(cin, g.materia);
+    while(!semValido) {
+        cout << "Semestre: ";
+    
+        cout << "\nLista de semestres disponibles: " << endl;
+        for(auto i: this->semestres) {
+            cout << i.first << " - " << i.second.identificador << endl;
+        }
+
+        // Elimina el cin.ignore() que estaba aquí
+        getline(cin, g.semestre);
+        
+        // Verificar si el semestre existe
+        if(this->semestres.find(g.semestre) != this->semestres.end()) {
+            semValido = 1;
+        }
+        else {
+            semValido = 0;
+            if(g.semestre == "SALIR") {
+                cout << "Saliendo del registro de grupo." << endl;
+                break;
+            }
+            else {
+                cout << "Semestre no encontrado." << endl;
+                cout << "Ingresaste: '" << g.semestre << "'" << endl; // Para depurar
+            }
+        }
+    }
+    cout << "Horario (LMi 10-12, V11-12): ";
+    cin.ignore();
+    getline(cin, g.horario);
+    
+    g.maestro = docente;
+
+    docente->clases[g.codigo] = &g; // Asignar grupo al docente
+    int numGrupo = this->semestres[g.semestre].grupos.size();
+    this->semestres[g.semestre].grupos.insert({numGrupo, g}); // Asignar grupo al semestre
+    cout << "\nGrupo creado correctamente." << endl;
+}
+
 void Menu::registrarSemestre() {
     Semestre s;
     string aux1, aux2;
-    cout << "Año actual: ";
+    
+    cout << "Año: ";
     cin >> aux1;
+    
     cout << "Semestre A o B: ";
     cin >> aux2;
+    
     s.identificador = aux1 + aux2;
-
-
+    
+    // Crear un ID único para este semestre
+    string idSemestre = aux1 + aux2;
+    
+    // Guardar el semestre en el mapa
+    semestres[idSemestre] = s;
+    
+    cout << "\nSemestre " << s.identificador << " registrado correctamente." << endl;
 };
 
 void Menu::registrarEstudiante() {
-    int aux;
     Estudiante e;
-    cout << "Nombre del estudiante: ";
-    cin >> e.nombre;
+    string auxMatricula;
+    
+    cout << "\nNombre del estudiante: ";
+    cin.ignore(); // Limpiar buffer
+    getline(cin, e.nombre);
+    
     cout << "Matricula existente (0 para generar nueva): ";
-    cin >> aux;
-    if(!aux) {
-        // string semestreActual = this->semestres.rbegin() != map.rend();
-        e.matricula = this->estudiantes.size() + 1;
+    cin >> auxMatricula;
+    
+    if(auxMatricula == "0") {
+        // Generar nueva matrícula
+        int numMatricula = this->estudiantes.size() + 1;
+        e.matricula = to_string(numMatricula);
+    } else {
+        e.matricula = auxMatricula;
     }
+    
+    cout << "Grado: ";
+    cin.ignore();
+    getline(cin, e.grado);
+    
+    cout << "Correo electrónico: ";
+    getline(cin, e.correoElectronico);
+    
+    cout << "Semestre de inicio: ";
+    getline(cin, e.semestre_inicio);
+    
+    // Guardar el estudiante en el mapa
+    estudiantes[e.matricula] = e;
+    
+    cout << "\nEstudiante " << e.nombre << " registrado correctamente.";
+    cout << "\nMatrícula: " << e.matricula << endl;
 };
 
 void Menu::registrarDocente() {
     Docente d;
     cout << "\nNombre del docente: ";
-    cin >> d.nombre;
+    cin.ignore(); // Limpiar el buffer de entrada
+    getline(cin, d.nombre); // Usar getline para nombres con espacios
+    
     cout << "\nEspecialidad: "; 
-    cin >> d.especialidad;
-    d.numeroEmpleado = (rand() * 10000) + 101;
-    cout << d.nombre << " registrado correctamente.\nNumero de empleado: \t" << d.numeroEmpleado;
+    getline(cin, d.especialidad);
+    
+    // Generar un número de empleado más consistente
+    int numRandom = rand() % 9000 + 1000; // Genera un número entre 1000 y 9999
+    d.numeroEmpleado = to_string(numRandom);
+    
+    // Guardar el docente en el mapa
+    docentes[d.numeroEmpleado] = d;
+    
+    cout << "\n" << d.nombre << " registrado correctamente.";
+    cout << "\nNumero de empleado: " << d.numeroEmpleado << endl;
+    
+    // Agregar una pausa para que el usuario vea la información
+    cout << "\nPresiona Enter para continuar...";
+    cin.get();
 };
 
 void Menu::guardarMemoria() {
@@ -196,7 +311,6 @@ void Menu::guardarMemoria() {
     
     archivo.close();
     cout << "Datos guardados correctamente.\n";
-
 }
 
 void Menu::cargarMemoria() {
@@ -320,16 +434,17 @@ void Menu::cargarMemoria() {
     
     archivo.close();
     cout << "Datos cargados correctamente.\n";
-
 }
-
 
 int main() {
     srand(time(NULL));
     setlocale(LC_ALL, "spanish");
     Menu p;
     p.cargarMemoria();
+    p.seguir = 1;
+    
     while(p.seguir) {
+        int opcion;
         cout << "\n\n\t\tSistema de control escolar\n";
         cout << "1. Registrar semestre\n";
         cout << "2. Registrar estudiante\n";
@@ -337,10 +452,18 @@ int main() {
         cout << "4. Mostrar docentes\n";
         cout << "5. Mostrar estudiantes\n";
         cout << "6. Mostrar semestres\n";
-        cout << "7. Guardar datos\n";
-        cout << "8. Salir\n";
+        cout << "0. Salir\n";
         cout << "Selecciona una opción: ";
         cin >> p.seguir;
+        
+        // Verificar si la entrada es válida
+        if (cin.fail()) {
+            cin.clear(); // Limpiar el estado de error
+            cin.ignore(10000, '\n'); // Descartar entrada incorrecta
+            cout << "Entrada no válida. Por favor ingrese un número.\n";
+            p.seguir = 999;
+            continue;
+        }
 
         switch(p.seguir) {
             case 1:
@@ -354,32 +477,39 @@ int main() {
                 break;
             case 4:
                 // Mostrar docentes
+                cout << "\nLista de docentes:" << endl;
+                for (const auto& [id, docente] : p.docentes) {
+                    cout << "ID: " << id << " Nombre: " << docente.nombre 
+                         << " Especialidad: " << docente.especialidad << endl;
+                }
                 break;
             case 5:
                 // Mostrar estudiantes
+                cout << "\nLista de estudiantes:" << endl;
+                for (const auto& [matricula, estudiante] : p.estudiantes) {
+                    cout << "Matrícula: " << matricula << " Nombre: " << estudiante.nombre << endl;
+                }
                 break;
             case 6:
                 // Mostrar semestres
+                cout << "\nLista de semestres:" << endl;
+                for (const auto& [id, semestre] : p.semestres) {
+                    cout << "ID: " << id << " Identificador: " << semestre.identificador << endl;
+                }
                 break;
             case 7:
-                p.guardarMemoria();
+                // Registrar grupo
+                p.crearGrupo();
                 break;
-            case 8:
+
+            case 0:
                 p.guardarMemoria();
-                return 0;
+                p.seguir = 0;
+                cout << "Datos guardados. Saliendo del sistema...\n";
+                break;
             default:
                 cout << "Opción no válida.\n";
         }
-        cout << "\n\n¿Deseas continuar? (1: Sí, 0: No): ";
-        cin >> p.seguir;
-        if (p.seguir == 0) {
-            p.guardarMemoria();
-            cout << "Saliendo del sistema...\n";
-        }
-        // else if (p.seguir != 1) {
-        //     cout << "Opción no válida. Saliendo del sistema...\n";
-        //     p.guardarMemoria();
-        // }
     }
 
     return 0;
